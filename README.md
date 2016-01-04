@@ -9,6 +9,8 @@ License: CC0 (See COPYING file)
 
 ## Usage
 
+Players must have the "trade" privilege in order to request trades.
+
 To request a trade use:
 
 `/trade <player_name>`

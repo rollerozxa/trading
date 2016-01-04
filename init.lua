@@ -322,6 +322,10 @@ minetest.register_chatcommand("trade", {
 	description="Request to trade with a player",
 	params = "<player_name>",
 	func = function(player_name, param)
+		if not minetest.check_player_privs(player_name, {trade=true}) then
+			return false, "You do not have the trade privilege"
+		end
+	
 		if player_name == param then
 			return false, "You cannot start a trade with yourself"
 		end
