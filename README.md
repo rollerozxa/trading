@@ -16,3 +16,7 @@ To request a trade use:
 To accept a trade offer from a specific player, use:
 
 `/accepttrade <player_name>`
+
+## Configuration
+
+See settings.lua for configuration.
