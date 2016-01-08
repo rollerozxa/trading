@@ -335,18 +335,6 @@ minetest.register_chatcommand("trade", {
 			return false, "Requested player not found"
 		end
 
-		if TRADE_DISTANCE ~= -1 then
-			requester_pos = minetest.get_player_by_name(player_name):getpos()
-			accepter_pos = minetest.get_player_by_name(param):getpos()
-			local dist = math.sqrt(math.pow(requester_pos.x - accepter_pos.x, 2) +
-					math.pow(requester_pos.y - accepter_pos.y, 2) +
-					math.pow(requester_pos.z - accepter_pos.z, 2))
-
-			if dist > TRADE_DISTANCE then
-				return false, "You are too far away from " .. param .. " to trade, move closer"
-			end
-		end
-
 		if get_trade(player_name, param) then
 			return false, "You have already have a pending trade request with " .. param
 		end
@@ -368,6 +356,18 @@ minetest.register_chatcommand("accepttrade", {
 
 		if not requested_player then
 			return false, "Requested player not found"
+		end
+		
+		if TRADE_DISTANCE ~= -1 then
+			accepter_pos = minetest.get_player_by_name(player_name):getpos()
+			requester_pos = minetest.get_player_by_name(param):getpos()
+			local dist = math.sqrt(math.pow(requester_pos.x - accepter_pos.x, 2) +
+					math.pow(requester_pos.y - accepter_pos.y, 2) +
+					math.pow(requester_pos.z - accepter_pos.z, 2))
+
+			if dist > TRADE_DISTANCE then
+				return false, "You are too far away from " .. param .. " to trade, move closer"
+			end
 		end
 
 		for _,trade in ipairs(pending_trades) do
