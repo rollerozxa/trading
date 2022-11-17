@@ -5,7 +5,6 @@ To the extent possible under law, the author(s) have dedicated all copyright and
 related and neighboring rights to this software to the public domain worldwide. This
 software is distributed without any warranty.
 --]]
-dofile(minetest.get_modpath("trading") .. "/settings.lua")
 
 local available_invs = {}
 local all_invs = {}
@@ -15,25 +14,29 @@ local pending_trades = {}
 minetest.register_privilege("trade",
 		"Player can request to trade with other players using the /trade command")
 
-local trade_formspec =
-"size[9,9.5;]" ..
-"label[0,0;You are offering]" ..
-"label[5,0;OTHER_PLAYER is offering]" ..
-"button[7,4.5;2,1;make_trade_button;Make Trade]" ..
-"label[0,5;Your Inventory]" ..
-"list[current_player;main;0.5,5.5;8,4;]" ..
-"list[detached:LEFT_INV;main;0,0.5;4,4;]" ..
-"list[detached:RIGHT_INV;main;5,0.5;4,4]"
+local trade_formspec = [[
+	size[9,9.5;]
+	label[0,0;You are offering]
+	label[5,0;OTHER_PLAYER is offering]
+	button[7,4.5;2,1;make_trade_button;Make Trade]
+	label[0,5;Your Inventory]
+	list[current_player;main;0.5,5.5;8,4;]
+	list[detached:LEFT_INV;main;0,0.5;4,4;]
+	list[detached:RIGHT_INV;main;5,0.5;4,4]
+]]
 
-local cancel_formspec =
-"size[5,2;]" ..
-"label[0,0;Other player canceled trade]" ..
-"button_exit[1.5,1;2,1;exit_button;OK]"
+local cancel_formspec = [[
+	size[5,2;]
+	label[0,0;Other player canceled trade]
+	button_exit[1.5,1;2,1;exit_button;OK]
+]]
 
-local trade_complete_formspec =
-"size[5,2;]" ..
-"label[0,0;Trade Complete]" ..
-"button_exit[1.5,1;2,1;exit_button;OK]"
+local trade_complete_formspec = [[
+	size[5,2;]
+	label[0,0;Trade Complete]
+	button_exit[1.5,1;2,1;exit_button;OK]
+]]
+
 
 -- Returns the active trade involving the specified player
 local get_active_trade_involving_player = function(player_name)
@@ -64,11 +67,10 @@ local free_trade_inventories = function(trade)
 		if all_invs[inv_name] then
 			available_invs[#available_invs+1] = inv_name
 		else
-			minetest.log("error",
-					"Warning, trading tried to free a trade inventory that does not exist")
+			minetest.log("error", "Warning, trading tried to free a trade inventory that does not exist")
 		end
 	end
-	return;
+	return
 end
 
 -- Remove all trades from the pending_trades table involving the specified player
@@ -79,7 +81,7 @@ local remove_trades_involving_player = function(player_name)
 			table.remove(pending_trades, index)
 		end
 	end
-	return;
+	return
 end
 
 -- Remove the trade from the pending_trades table with the specified requester and accepter
@@ -88,10 +90,10 @@ local remove_trade = function(requester, accepter)
 		if trade.requester == requester and trade.accepter == accepter then
 			free_trade_inventories(trade)
 			table.remove(pending_trades, index)
-			return;
+			return
 		end
 	end
-	return;
+	return
 end
 
 -- Returns the name of a detached trade inventory for use during a trade
@@ -325,7 +327,7 @@ minetest.register_chatcommand("trade", {
 		if not minetest.check_player_privs(player_name, {trade=true}) then
 			return false, "You do not have the trade privilege"
 		end
-	
+
 		if player_name == param then
 			return false, "You cannot start a trade with yourself"
 		end
@@ -357,15 +359,16 @@ minetest.register_chatcommand("accepttrade", {
 		if not requested_player then
 			return false, "Requested player not found"
 		end
-		
-		if TRADE_DISTANCE ~= -1 then
+
+		local trade_range = minetest.settings:get('trading_range') or -1
+		if trade_range ~= -1 then
 			accepter_pos = minetest.get_player_by_name(player_name):getpos()
 			requester_pos = minetest.get_player_by_name(param):getpos()
 			local dist = math.sqrt(math.pow(requester_pos.x - accepter_pos.x, 2) +
 					math.pow(requester_pos.y - accepter_pos.y, 2) +
 					math.pow(requester_pos.z - accepter_pos.z, 2))
 
-			if dist > TRADE_DISTANCE then
+			if dist > trade_range then
 				return false, "You are too far away from " .. param .. " to trade, move closer"
 			end
 		end
