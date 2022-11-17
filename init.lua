@@ -14,6 +14,13 @@ local pending_trades = {}
 minetest.register_privilege("trade",
 		"Player can request to trade with other players using the /trade command")
 
+minetest.register_on_newplayer(function(player)
+	local playername = player:get_player_name()
+	local privs = minetest.get_player_privs(playername)
+	privs["trade"] = true
+	minetest.set_player_privs(playername, privs)
+end)
+
 local trade_formspec = [[
 	size[9,9.5;]
 	label[0,0;You are offering]
