@@ -6,21 +6,21 @@ related and neighboring rights to this software to the public domain worldwide. 
 software is distributed without any warranty.
 --]]
 
-local S = minetest.get_translator('trading')
+local S = core.get_translator('trading')
 
 local available_invs = {}
 local all_invs = {}
 
 local pending_trades = {}
 
-minetest.register_privilege("trade",
+core.register_privilege("trade",
 		S("Player can request to trade with other players using the /trade command"))
 
-minetest.register_on_newplayer(function(player)
+core.register_on_newplayer(function(player)
 	local playername = player:get_player_name()
-	local privs = minetest.get_player_privs(playername)
+	local privs = core.get_player_privs(playername)
 	privs["trade"] = true
-	minetest.set_player_privs(playername, privs)
+	core.set_player_privs(playername, privs)
 end)
 
 local trade_formspec = [[
@@ -87,7 +87,7 @@ local free_trade_inventories = function(trade)
 		if all_invs[inv_name] then
 			available_invs[#available_invs+1] = inv_name
 		else
-			minetest.log("error", "Warning, trading tried to free a trade inventory that does not exist")
+			core.log("error", "Warning, trading tried to free a trade inventory that does not exist")
 		end
 	end
 	return
@@ -123,7 +123,7 @@ local create_trade_inventory = function(player_name, trade)
 	end
 
 	local inv_name = available_invs[1]
-	local inv_ref = minetest.create_detached_inventory(inv_name, {
+	local inv_ref = core.create_detached_inventory(inv_name, {
 		allow_move = function(inv, from_list, from_index, to_list, to_index, count, player)
 			if player:get_player_name() == player_name then
 				return 99
@@ -199,13 +199,13 @@ function Trade:start()
 	self.accepter_trade_inv = create_trade_inventory(self.accepter, self)
 	self.requester_trade_inv = create_trade_inventory(self.requester, self)
 
-	minetest.show_formspec(self.requester,
+	core.show_formspec(self.requester,
 		"trading:trade_formspec", formspec_wrapper(requester_formspec, {
 			left_inv = self.requester_trade_inv,
 			right_inv = self.accepter_trade_inv,
 			other_player = self.accepter
 		}))
-	minetest.show_formspec(self.accepter,
+	core.show_formspec(self.accepter,
 		"trading:trade_formspec", formspec_wrapper(accepter_formspec, {
 			left_inv = self.accepter_trade_inv,
 			right_inv = self.requester_trade_inv,
@@ -237,8 +237,8 @@ end
 -- Cancel the trade, give the requesters offered items back and the accepter's offered items back
 function Trade:cancel()
 	-- Give requester items back to requester
-	local requester_inv = minetest.get_inventory({type="player", name=self.requester})
-	local requester_trade_inv = minetest.get_inventory(
+	local requester_inv = core.get_inventory({type="player", name=self.requester})
+	local requester_trade_inv = core.get_inventory(
 			{type="detached", name=self.requester_trade_inv})
 	for _,itemstack in pairs(requester_trade_inv:get_list("main")) do
 		requester_inv:add_item("main", itemstack:to_string())
@@ -246,8 +246,8 @@ function Trade:cancel()
 	requester_trade_inv:set_list("main", {})
 
 	-- Give accepter items back to accepter
-	local accepter_inv =  minetest.get_inventory({type="player", name=self.accepter})
-	local accepter_trade_inv = minetest.get_inventory(
+	local accepter_inv =  core.get_inventory({type="player", name=self.accepter})
+	local accepter_trade_inv = core.get_inventory(
 			{type="detached", name=self.accepter_trade_inv})
 	for _,itemstack in pairs(accepter_trade_inv:get_list("main")) do
 		accepter_inv:add_item("main", itemstack:to_string())
@@ -258,8 +258,8 @@ end
 -- Finalize the trade, give the requester's offered items to the accepter and vica versa
 function Trade:finalize()
 	-- Give requester items to accepter
-	local accepter_inv = minetest.get_inventory({type="player", name=self.accepter})
-	local requester_trade_inv = minetest.get_inventory(
+	local accepter_inv = core.get_inventory({type="player", name=self.accepter})
+	local requester_trade_inv = core.get_inventory(
 			{type="detached", name=self.requester_trade_inv})
 	for _,itemstack in pairs(requester_trade_inv:get_list("main")) do
 		accepter_inv:add_item("main", itemstack:to_string())
@@ -267,8 +267,8 @@ function Trade:finalize()
 	requester_trade_inv:set_list("main", {})
 
 	-- Give accepter items to requester
-	local requester_inv = minetest.get_inventory({type="player", name=self.requester})
-	local accepter_trade_inv = minetest.get_inventory(
+	local requester_inv = core.get_inventory({type="player", name=self.requester})
+	local accepter_trade_inv = core.get_inventory(
 			{type="detached", name=self.accepter_trade_inv})
 	for _,itemstack in pairs(accepter_trade_inv:get_list("main")) do
 		requester_inv:add_item("main", itemstack:to_string())
@@ -276,14 +276,14 @@ function Trade:finalize()
 	accepter_trade_inv:set_list("main", {})
 end
 
-minetest.register_on_player_receive_fields(function(player, formname, fields)
+core.register_on_player_receive_fields(function(player, formname, fields)
 	if fields.quit == "true" and formname == "trading:trade_formspec" then
 		local trade = get_active_trade_involving_player(player:get_player_name())
 		if player:get_player_name() == trade.requester then
-			minetest.show_formspec(trade.accepter,
+			core.show_formspec(trade.accepter,
 					"trading:cancel_trade", cancel_formspec)
 		else
-			minetest.show_formspec(trade.requester,
+			core.show_formspec(trade.requester,
 					"trading:cancel_trade", cancel_formspec)
 		end
 		remove_trade(trade.requester, trade.accepter)
@@ -294,23 +294,23 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		if trade.requester_ready and trade.accepter_ready then
 			trade:finalize()
 			remove_trade(trade.requester, trade.accepter)
-			minetest.show_formspec(trade.requester,
+			core.show_formspec(trade.requester,
 					"trading:trade_completed", trade_complete_formspec)
-			minetest.show_formspec(trade.accepter,
+			core.show_formspec(trade.accepter,
 					"trading:trade_completed", trade_complete_formspec)
 		end
 	end
 end)
 
 -- Cancel any active and inactive trades a player has when he leaves
-minetest.register_on_leaveplayer(function(player)
+core.register_on_leaveplayer(function(player)
 	local active_trade = get_active_trade_involving_player(player:get_player_name())
 	if active_trade then
 		if player:get_player_name() == active_trade.requester then
-			minetest.show_formspec(active_trade.accepter,
+			core.show_formspec(active_trade.accepter,
 					"trading:cancel_trade", cancel_formspec)
 		else
-			minetest.show_formspec(active_trade.requester,
+			core.show_formspec(active_trade.requester,
 					"trading:cancel_trade", cancel_formspec)
 		end
 		remove_trade(active_trade.requester, active_trade.accepter)
@@ -321,12 +321,12 @@ minetest.register_on_leaveplayer(function(player)
 end)
 
 -- Create more trade inventories when players join in order to accommodate more trades
-minetest.register_on_joinplayer(function(player)
+core.register_on_joinplayer(function(player)
 	local curr_num_invs = 0
 	for _,_ in pairs(all_invs) do
 		curr_num_invs = curr_num_invs + 1
 	end
-	local invs_to_add = (#minetest.get_connected_players()) - (curr_num_invs)
+	local invs_to_add = (#core.get_connected_players()) - (curr_num_invs)
 
 	for i=curr_num_invs+1,curr_num_invs+invs_to_add do
 		available_invs[#available_invs+1] = "trade_inv_" .. tostring(i)
@@ -334,11 +334,11 @@ minetest.register_on_joinplayer(function(player)
 	end
 end)
 
-minetest.register_chatcommand("trade", {
+core.register_chatcommand("trade", {
 	description = S("Request to trade with a player"),
 	params = "<player_name>",
 	func = function(player_name, param)
-		if not minetest.check_player_privs(player_name, {trade=true}) then
+		if not core.check_player_privs(player_name, {trade=true}) then
 			return false, S("You do not have the trade privilege")
 		end
 
@@ -346,7 +346,7 @@ minetest.register_chatcommand("trade", {
 			return false, S("You cannot start a trade with yourself")
 		end
 
-		local requested_player = minetest.get_player_by_name(param)
+		local requested_player = core.get_player_by_name(param)
 		if not requested_player then
 			return false, S("Requested player not found")
 		end
@@ -357,25 +357,25 @@ minetest.register_chatcommand("trade", {
 
 		local trade = Trade:new(player_name, param)
 		pending_trades[#pending_trades+1] = trade
-		minetest.chat_send_player(param, S("@1 has requested to trade with you, use /accepttrade @1 to accept", player_name)
+		core.chat_send_player(param, S("@1 has requested to trade with you, use /accepttrade @1 to accept", player_name)
 		return true, S("Trade request sent")
 	end
 })
 
-minetest.register_chatcommand("accepttrade", {
+core.register_chatcommand("accepttrade", {
 	description = S("Accept a trade request from a player"),
 	params = "<player_name>",
 	func = function(player_name, param)
-		local requested_player = minetest.get_player_by_name(param)
+		local requested_player = core.get_player_by_name(param)
 
 		if not requested_player then
 			return false, S("Requested player not found")
 		end
 
-		local trade_range = minetest.settings:get('trading_range') or -1
+		local trade_range = core.settings:get('trading_range') or -1
 		if trade_range ~= -1 then
-			accepter_pos = minetest.get_player_by_name(player_name):getpos()
-			requester_pos = minetest.get_player_by_name(param):getpos()
+			accepter_pos = core.get_player_by_name(player_name):getpos()
+			requester_pos = core.get_player_by_name(param):getpos()
 			local dist = math.sqrt(math.pow(requester_pos.x - accepter_pos.x, 2) +
 					math.pow(requester_pos.y - accepter_pos.y, 2) +
 					math.pow(requester_pos.z - accepter_pos.z, 2))
