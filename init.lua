@@ -6,13 +6,15 @@ related and neighboring rights to this software to the public domain worldwide. 
 software is distributed without any warranty.
 --]]
 
+local S = minetest.get_translator('trading')
+
 local available_invs = {}
 local all_invs = {}
 
 local pending_trades = {}
 
 minetest.register_privilege("trade",
-		"Player can request to trade with other players using the /trade command")
+		S("Player can request to trade with other players using the /trade command"))
 
 minetest.register_on_newplayer(function(player)
 	local playername = player:get_player_name()
@@ -24,12 +26,12 @@ end)
 local trade_formspec = [[
 	size[9,9.5;]
 	label[0,0;You are offering]
-	label[5,0;OTHER_PLAYER is offering]
+	label[5,0;${other_player} is offering]
 	button[7,4.5;2,1;make_trade_button;Make Trade]
 	label[0,5;Your Inventory]
 	list[current_player;main;0.5,5.5;8,4;]
-	list[detached:LEFT_INV;main;0,0.5;4,4;]
-	list[detached:RIGHT_INV;main;5,0.5;4,4]
+	list[detached:${left_inv};main;0,0.5;4,4;]
+	list[detached:${right_inv};main;5,0.5;4,4]
 ]]
 
 local cancel_formspec = [[
@@ -44,6 +46,17 @@ local trade_complete_formspec = [[
 	button_exit[1.5,1;2,1;exit_button;OK]
 ]]
 
+
+-- Simple formspec wrapper that does variable substitution.
+local function formspec_wrapper(formspec, variables)
+	local retval = formspec
+
+	for k,v in pairs(variables) do
+		retval = retval:gsub("${"..k.."}", v)
+	end
+
+	return retval
+end
 
 -- Returns the active trade involving the specified player
 local get_active_trade_involving_player = function(player_name)
@@ -186,24 +199,18 @@ function Trade:start()
 	self.accepter_trade_inv = create_trade_inventory(self.accepter, self)
 	self.requester_trade_inv = create_trade_inventory(self.requester, self)
 
-	local requester_formspec = string.gsub(trade_formspec,
-			"LEFT_INV", self.requester_trade_inv)
-	requester_formspec = string.gsub(requester_formspec,
-			"RIGHT_INV", self.accepter_trade_inv)
-	requester_formspec = string.gsub(requester_formspec,
-			"OTHER_PLAYER", self.accepter)
-
-	local accepter_formspec = string.gsub(trade_formspec,
-			"LEFT_INV", self.accepter_trade_inv)
-	accepter_formspec = string.gsub(accepter_formspec,
-			"RIGHT_INV", self.requester_trade_inv)
-	accepter_formspec = string.gsub(accepter_formspec,
-			"OTHER_PLAYER", self.requester)
-
 	minetest.show_formspec(self.requester,
-			"trading:trade_formspec", requester_formspec)
+		"trading:trade_formspec", formspec_wrapper(requester_formspec, {
+			left_inv = self.requester_trade_inv,
+			right_inv = self.accepter_trade_inv,
+			other_player = self.accepter
+		}))
 	minetest.show_formspec(self.accepter,
-			"trading:trade_formspec", accepter_formspec)
+		"trading:trade_formspec", formspec_wrapper(accepter_formspec, {
+			left_inv = self.accepter_trade_inv,
+			right_inv = self.requester_trade_inv,
+			other_player = self.requester
+		}))
 
 	self.active = true
 	return
@@ -328,43 +335,41 @@ minetest.register_on_joinplayer(function(player)
 end)
 
 minetest.register_chatcommand("trade", {
-	description="Request to trade with a player",
+	description = S("Request to trade with a player"),
 	params = "<player_name>",
 	func = function(player_name, param)
 		if not minetest.check_player_privs(player_name, {trade=true}) then
-			return false, "You do not have the trade privilege"
+			return false, S("You do not have the trade privilege")
 		end
 
 		if player_name == param then
-			return false, "You cannot start a trade with yourself"
+			return false, S("You cannot start a trade with yourself")
 		end
 
 		local requested_player = minetest.get_player_by_name(param)
 		if not requested_player then
-			return false, "Requested player not found"
+			return false, S("Requested player not found")
 		end
 
 		if get_trade(player_name, param) then
-			return false, "You have already have a pending trade request with " .. param
+			return false, S("You have already have a pending trade request with @1", param)
 		end
 
 		local trade = Trade:new(player_name, param)
 		pending_trades[#pending_trades+1] = trade
-		minetest.chat_send_player(param, player_name ..
-				" has requested to trade with you, use /accepttrade "
-				.. player_name .. " to accept")
-		return true, "Trade request sent"
+		minetest.chat_send_player(param, S("@1 has requested to trade with you, use /accepttrade @1 to accept", player_name)
+		return true, S("Trade request sent")
 	end
 })
 
 minetest.register_chatcommand("accepttrade", {
-	description="Accept a trade request from a player",
+	description = S("Accept a trade request from a player"),
 	params = "<player_name>",
 	func = function(player_name, param)
 		local requested_player = minetest.get_player_by_name(param)
 
 		if not requested_player then
-			return false, "Requested player not found"
+			return false, S("Requested player not found")
 		end
 
 		local trade_range = minetest.settings:get('trading_range') or -1
@@ -376,7 +381,7 @@ minetest.register_chatcommand("accepttrade", {
 					math.pow(requester_pos.z - accepter_pos.z, 2))
 
 			if dist > trade_range then
-				return false, "You are too far away from " .. param .. " to trade, move closer"
+				return false, S("You are too far away from @1 to trade, move closer", param)
 			end
 		end
 
@@ -386,6 +391,6 @@ minetest.register_chatcommand("accepttrade", {
 				return true
 			end
 		end
-		return false, "Requested player did not request a trade with you"
+		return false, S("Requested player did not request a trade with you")
 	end
 })
