@@ -357,7 +357,7 @@ core.register_chatcommand("trade", {
 
 		local trade = Trade:new(player_name, param)
 		pending_trades[#pending_trades+1] = trade
-		core.chat_send_player(param, S("@1 has requested to trade with you, use /accepttrade @1 to accept", player_name)
+		core.chat_send_player(param, S("@1 has requested to trade with you, use /accepttrade @1 to accept", player_name))
 		return true, S("Trade request sent")
 	end
 })
